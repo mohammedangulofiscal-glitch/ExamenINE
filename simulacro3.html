@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Simulacro INE – Módulo C Derecho Electoral</title>
+
+<!-- ═══════════════════════════════════════════════════════
+  CONFIGURACIÓN — solo cambia estas líneas por simulacro
+════════════════════════════════════════════════════════ -->
+<script>
+  const CONFIG = {
+    BANCO_URL:   'https://raw.githubusercontent.com/derechoelectoral2026/Bancos-Spen/main/banco-modulo-c.js',
+    MODULO:      'Módulo C — Derecho Electoral',
+    SUBTITULO:   'Marco jurídico electoral mexicano · Diagnóstico',
+    TIEMPO_MIN:  50,
+    N_PREGUNTAS: 40   // ← preguntas a seleccionar del banco (cambia este número)
+  };
+</script>
+
+<style>
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+body { font-family:'Segoe UI',sans-serif; background:#f5f0ff; color:#222; min-height:100dvh; overflow-x:hidden; }
+
+/* HEADER */
+.header { background:linear-gradient(135deg,#6a1b9a,#ab47bc); color:white; padding:10px 14px; display:flex; align-items:center; gap:10px; box-shadow:0 2px 8px rgba(0,0,0,.2); position:sticky; top:0; z-index:200; }
+.header-logo { font-size:1.35rem; flex-shrink:0; }
+.header-text { flex:1; min-width:0; }
+.header h1 { font-size:.88rem; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.header p  { font-size:.62rem; opacity:.82; margin-top:1px; }
+.header-right { flex-shrink:0; text-align:right; }
+.timer { font-size:1.45rem; font-weight:800; font-variant-numeric:tabular-nums; letter-spacing:.5px; line-height:1; }
+.t-lbl { font-size:.55rem; opacity:.65; margin-top:1px; }
+.timer.warning { color:#ffe082; }
+.timer.danger  { color:#ff6b6b; animation:pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:.45} }
+.progress-wrap { background:#e1bee7; height:3px; }
+.progress-bar  { height:3px; background:#fff; transition:width .4s; }
+
+/* MAIN */
+.main { padding:12px 12px 80px; max-width:600px; margin:0 auto; }
+
+/* LOADING */
+.loading-screen { background:white; border-radius:14px; padding:40px 16px; box-shadow:0 2px 12px rgba(0,0,0,.08); margin-top:14px; text-align:center; }
+.spinner { width:40px; height:40px; border:4px solid #e1bee7; border-top-color:#6a1b9a; border-radius:50%; animation:spin .8s linear infinite; margin:0 auto 16px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.loading-screen p { color:#888; font-size:.85rem; }
+
+/* ERROR */
+.error-screen { background:white; border-radius:14px; padding:28px 16px; box-shadow:0 2px 12px rgba(0,0,0,.08); margin-top:14px; text-align:center; border-top:4px solid #e53935; }
+.error-screen h3 { color:#c62828; margin-bottom:8px; }
+.error-screen p { color:#666; font-size:.82rem; line-height:1.5; }
+.error-screen code { background:#f5f5f5; padding:3px 7px; border-radius:4px; font-size:.78rem; word-break:break-all; }
+
+/* START */
+.start-screen { background:white; border-radius:14px; padding:22px 16px; box-shadow:0 2px 12px rgba(0,0,0,.08); margin-top:14px; text-align:center; }
+.start-screen h2 { font-size:1.3rem; color:#6a1b9a; margin-bottom:10px; }
+.info-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin:16px 0; }
+.info-card { background:#f3e5f5; border-radius:10px; padding:11px 8px; }
+.info-card .num { font-size:1.5rem; font-weight:800; color:#6a1b9a; }
+.info-card .lbl { font-size:.72rem; color:#666; margin-top:2px; }
+.topic-section { text-align:left; margin:14px 0; }
+.topic-section-title { font-size:.72rem; font-weight:800; color:#6a1b9a; text-transform:uppercase; letter-spacing:.5px; margin-bottom:7px; padding-left:3px; }
+.topic-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-bottom:10px; }
+.topic-pill { background:#f3e5f5; border-radius:7px; padding:6px 10px; font-size:.76rem; color:#6a1b9a; display:flex; justify-content:space-between; }
+.topic-pill .cnt { font-weight:800; }
+.biblio-note { font-size:.68rem; color:#888; background:#f9f5ff; border-radius:8px; padding:9px 11px; margin:10px 0 13px; text-align:left; line-height:1.6; border-left:3px solid #ab47bc; }
+.biblio-note strong { color:#6a1b9a; }
+
+/* QUESTION CARD */
+.question-card { background:white; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,.07); overflow:hidden; margin-bottom:12px; }
+.q-header { background:#6a1b9a; color:white; padding:10px 14px; display:flex; justify-content:space-between; align-items:flex-start; gap:8px; flex-wrap:wrap; }
+.q-num-label { font-size:.8rem; font-weight:700; letter-spacing:.3px; }
+.q-area-badge { font-size:.65rem; font-weight:700; padding:4px 9px; border-radius:20px; background:rgba(255,255,255,.22); text-transform:uppercase; white-space:nowrap; flex-shrink:0; }
+.q-body { padding:14px 13px; }
+
+/* PASSAGE */
+.passage { background:#f5f0ff; border-left:4px solid #ab47bc; padding:11px 12px; border-radius:0 8px 8px 0; margin-bottom:12px; font-size:.83rem; line-height:1.7; }
+.passage-label { font-size:.65rem; font-weight:700; color:#6a1b9a; text-transform:uppercase; margin-bottom:5px; }
+
+/* QUESTION TEXT */
+.question-text { font-size:.9rem; font-weight:600; line-height:1.55; margin-bottom:14px; color:#1a1a2e; border-bottom:1px dashed #e0e0e0; padding-bottom:13px; }
+
+/* OPTIONS */
+.options { display:flex; flex-direction:column; gap:0; border:1.5px solid #e0e0e0; border-radius:10px; overflow:hidden; }
+.option { display:flex; align-items:stretch; cursor:pointer; transition:background .13s; font-size:.86rem; line-height:1.45; border-bottom:1px solid #e8e8e8; min-height:52px; }
+.option:last-child { border-bottom:none; }
+.option:active:not(.disabled) { background:#f3e5f544; }
+.option.selected  { background:#f3e5f5; }
+.option.correct   { background:#e8f5e9; }
+.option.incorrect { background:#ffebee; }
+.option.disabled  { cursor:default; }
+.opt-letter-col { width:46px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-right:1.5px solid #e0e0e0; background:#fafafa; }
+.option.selected  .opt-letter-col { background:#6a1b9a; border-right-color:#4a148c; }
+.option.correct   .opt-letter-col { background:#4caf50; border-right-color:#388e3c; }
+.option.incorrect .opt-letter-col { background:#f44336; border-right-color:#c62828; }
+.opt-letter { width:26px; height:26px; border-radius:50%; border:2px solid #bbb; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:.78rem; color:#555; background:white; }
+.option.selected  .opt-letter { border-color:white; color:#6a1b9a; }
+.option.correct   .opt-letter { border-color:white; color:#4caf50; }
+.option.incorrect .opt-letter { border-color:white; color:#f44336; }
+.opt-text { flex:1; padding:12px 12px; color:#333; display:flex; align-items:center; line-height:1.5; }
+.option.selected  .opt-text { color:#4a148c; font-weight:600; }
+.option.correct   .opt-text { color:#2e7d32; font-weight:600; }
+.option.incorrect .opt-text { color:#b71c1c; }
+.opt-result-icon { padding:12px 12px 12px 0; font-size:1rem; display:flex; align-items:center; flex-shrink:0; }
+
+/* BIBLIO REF */
+.biblio-ref { font-size:.68rem; color:#ab47bc; padding:8px 14px 10px; background:#faf5ff; border-top:1px solid #f3e5f5; }
+
+/* EXPLANATION */
+.explanation { margin:0; padding:12px 14px; background:#f3e5f5; border-top:2px solid #ab47bc; font-size:.82rem; line-height:1.65; display:none; }
+.explanation.show { display:block; }
+.explanation strong { color:#6a1b9a; }
+
+/* VER SOLUCIÓN */
+.ver-sol-wrap { text-align:center; margin-bottom:10px; }
+.btn-ver-sol { background:white; border:2px solid #ab47bc; color:#6a1b9a; padding:9px 20px; border-radius:9px; font-weight:700; font-size:.84rem; cursor:pointer; transition:all .15s; min-height:44px; }
+.btn-ver-sol:active { background:#f3e5f5; }
+
+/* BUTTONS */
+.btn { padding:10px 18px; border-radius:9px; border:none; font-size:.85rem; font-weight:700; cursor:pointer; transition:all .15s; min-height:44px; }
+.btn:active { transform:scale(.96); }
+.btn-primary   { background:linear-gradient(135deg,#6a1b9a,#ab47bc); color:white; }
+.btn-primary:active   { opacity:.88; }
+.btn-primary:disabled { opacity:.4; cursor:not-allowed; }
+.btn-secondary { background:#f0f0f0; color:#555; }
+.btn-secondary:active { background:#e0e0e0; }
+.btn-lg { padding:13px 26px; font-size:.93rem; border-radius:11px; }
+
+/* BOTTOM NAV */
+.nav-bar { position:fixed; bottom:0; left:0; right:0; background:white; border-top:1px solid #e0e0e0; padding:8px 14px; padding-bottom:max(8px,env(safe-area-inset-bottom)); display:flex; justify-content:space-between; align-items:center; gap:8px; box-shadow:0 -2px 10px rgba(0,0,0,.07); z-index:200; }
+.nav-info { font-size:.78rem; color:#888; line-height:1.4; }
+.nav-info span { color:#6a1b9a; font-weight:700; }
+.nav-btns { display:flex; gap:7px; flex-shrink:0; }
+.btn-sm { padding:9px 15px; font-size:.8rem; min-height:40px; }
+
+/* RESULTS */
+.results-screen { background:white; border-radius:14px; padding:24px 16px; box-shadow:0 2px 12px rgba(0,0,0,.08); margin-top:14px; text-align:center; }
+.score-circle { width:108px; height:108px; border-radius:50%; margin:0 auto 16px; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:1.8rem; font-weight:900; color:white; }
+.score-sub { font-size:.68rem; font-weight:500; opacity:.85; }
+.score-good { background:linear-gradient(135deg,#43a047,#66bb6a); }
+.score-mid  { background:linear-gradient(135deg,#f57c00,#ffa726); }
+.score-low  { background:linear-gradient(135deg,#c62828,#ef5350); }
+.stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:16px 0; }
+.stat-card { background:#f9f9f9; border-radius:10px; padding:11px 8px; }
+.stat-card .n { font-size:1.35rem; font-weight:800; }
+.stat-card .l { font-size:.7rem; color:#888; margin-top:2px; }
+.stat-correct .n { color:#43a047; }
+.stat-wrong .n   { color:#e53935; }
+.stat-skip .n    { color:#888; }
+.area-row { display:flex; align-items:center; gap:9px; margin-bottom:8px; font-size:.81rem; }
+.area-name { flex:1; color:#444; }
+.area-bar-wrap { flex:2; background:#eee; border-radius:4px; height:6px; }
+.area-bar { height:6px; border-radius:4px; }
+.area-pct { width:32px; text-align:right; font-weight:700; font-size:.78rem; }
+.weak-banner { background:linear-gradient(135deg,#6a1b9a,#ab47bc); color:white; border-radius:11px; padding:12px 14px; margin:12px 0; text-align:left; }
+.weak-banner h4 { margin-bottom:4px; font-size:.9rem; }
+.weak-banner p  { font-size:.78rem; opacity:.9; margin-bottom:6px; }
+.weak-tags { display:flex; flex-wrap:wrap; gap:5px; }
+.weak-tag  { background:rgba(255,255,255,.25); border-radius:5px; padding:3px 8px; font-size:.74rem; font-weight:700; }
+.hidden { display:none !important; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">⚖️</div>
+  <div class="header-text">
+    <h1 id="hdrTitle">Cargando simulacro…</h1>
+    <p id="hdrSub"></p>
+  </div>
+  <div class="header-right">
+    <div class="timer" id="timer">--:--</div>
+    <div class="t-lbl">tiempo restante</div>
+  </div>
+</div>
+<div class="progress-wrap"><div class="progress-bar" id="progressBar" style="width:0%"></div></div>
+
+<div class="main">
+  <!-- LOADING -->
+  <div class="loading-screen" id="loadingScreen">
+    <div class="spinner"></div>
+    <p>Cargando banco de preguntas…</p>
+  </div>
+
+  <!-- ERROR -->
+  <div class="error-screen hidden" id="errorScreen">
+    <h3>⚠️ No se pudo cargar el banco</h3>
+    <p>Verifica que la URL en <code>CONFIG.BANCO_URL</code> sea correcta y accesible.<br><br>URL configurada:<br><code id="errorUrl"></code></p>
+  </div>
+
+  <!-- START -->
+  <div class="start-screen hidden" id="startScreen">
+    <h2 id="startTitle"></h2>
+    <p style="background:#f9f5ff;border-radius:9px;padding:10px;color:#6a1b9a;font-weight:600;margin-bottom:14px;font-size:.82rem">
+      🎯 Modo diagnóstico — Al terminar verás qué temas dominas y cuáles reforzar.
+    </p>
+    <div class="info-grid" id="infoGrid"></div>
+    <div id="topicSections"></div>
+    <div class="biblio-note">
+      📚 <strong>Bibliografía oficial INE:</strong> CPEUM (2025) · LGIPE (2024) · LGPP (2023) · LGSMIME (2024) · LGMDE (2021) · Estatuto SPEN (2024) · Reglamento de Elecciones INE (2025) · LFCP (2021) · LFRM (2021) · Prud'homme, Cuad. Divulgación N°15 (2016)
+    </div>
+    <p style="font-size:.75rem;color:#888;margin-bottom:14px">⚡ El orden de preguntas cambia en cada sesión</p>
+    <button class="btn btn-primary btn-lg" style="width:100%" onclick="startExam()">Comenzar diagnóstico →</button>
+  </div>
+
+  <div id="examScreen" class="hidden"></div>
+  <div id="resultsScreen" class="hidden"></div>
+</div>
+
+<div class="nav-bar hidden" id="navBar">
+  <div class="nav-info">
+    Preg. <span id="navCurrent">1</span> de <span id="navTotal">?</span>
+  </div>
+  <div class="nav-btns">
+    <button class="btn btn-secondary btn-sm" id="btnPrev" onclick="prevQ()">← Ant.</button>
+    <button class="btn btn-primary  btn-sm" id="btnNext" onclick="nextQ()">Sig. →</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  CARGA DINÁMICA DEL BANCO
+// ═══════════════════════════════════════════════════════════
+let QBANK = [];
+
+async function cargarBanco() {
+  try {
+    const res = await fetch(CONFIG.BANCO_URL + '?v=' + Date.now());
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const code = await res.text();
+
+    const fn = new Function(code + '\n return BANCO_MODULO_C;');
+    const banco = fn();
+
+    if (!banco || !Array.isArray(banco) || banco.length === 0) {
+      throw new Error('Banco vacío o nombre de variable incorrecto.');
+    }
+
+    QBANK = banco;
+    inicializarSimulacro();
+
+  } catch (err) {
+    console.error('Error cargando banco:', err);
+    document.getElementById('loadingScreen').classList.add('hidden');
+    document.getElementById('errorUrl').textContent = CONFIG.BANCO_URL;
+    document.getElementById('errorScreen').classList.remove('hidden');
+  }
+}
+
+function inicializarSimulacro() {
+  document.getElementById('hdrTitle').textContent = CONFIG.MODULO;
+  document.getElementById('hdrSub').textContent = CONFIG.SUBTITULO;
+  document.title = 'Simulacro INE – ' + CONFIG.MODULO;
+
+  // Contar por subárea
+  const subCounts = {}, subLabels = {};
+  QBANK.forEach(q => {
+    subCounts[q.sa] = (subCounts[q.sa] || 0) + 1;
+    subLabels[q.sa] = q.sal;
+  });
+  const subs = Object.keys(subCounts).sort();
+
+  document.getElementById('infoGrid').innerHTML = `
+    <div class="info-card"><div class="num">${CONFIG.N_PREGUNTAS}</div><div class="lbl">Preguntas</div></div>
+    <div class="info-card"><div class="num">${CONFIG.TIEMPO_MIN}</div><div class="lbl">Minutos</div></div>
+    <div class="info-card"><div class="num">${subs.length}</div><div class="lbl">Subáreas</div></div>`;
+
+  // Agrupar subáreas por bloque (1.x, 2.x, 3.x)
+  const bloques = {"1":"Sistema Político Mexicano","2":"Sistema Electoral Mexicano","3":"Instituto Nacional Electoral"};
+  let topicHtml = '';
+  Object.entries(bloques).forEach(([key, titulo]) => {
+    const subsBloque = subs.filter(s => s.startsWith(key + '.'));
+    if (!subsBloque.length) return;
+    topicHtml += `<div class="topic-section">
+      <div class="topic-section-title">📚 ${titulo}</div>
+      <div class="topic-grid">
+        ${subsBloque.map(sa => `<div class="topic-pill"><span>${sa} ${subLabels[sa]}</span><span class="cnt">${subCounts[sa]}</span></div>`).join('')}
+      </div></div>`;
+  });
+  document.getElementById('topicSections').innerHTML = topicHtml;
+
+  document.getElementById('startTitle').textContent = '⚖️ ' + CONFIG.MODULO;
+  document.getElementById('navTotal').textContent = CONFIG.N_PREGUNTAS;
+  document.getElementById('timer').textContent = CONFIG.TIEMPO_MIN + ':00';
+
+  document.getElementById('loadingScreen').classList.add('hidden');
+  document.getElementById('startScreen').classList.remove('hidden');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ESTADO GLOBAL
+// ═══════════════════════════════════════════════════════════
+const SS = {
+  "1.1":{bg:"#e8eaf6",color:"#3949ab",icon:"📜"},
+  "1.2":{bg:"#fce4ec",color:"#c2185b",icon:"⚖️"},
+  "1.3":{bg:"#e0f2f1",color:"#00796b",icon:"🧑‍🤝‍🧑"},
+  "1.4":{bg:"#fff3e0",color:"#e65100",icon:"🏴"},
+  "2.1":{bg:"#f3e5f5",color:"#7b1fa2",icon:"📋"},
+  "2.2":{bg:"#e1f5fe",color:"#0277bd",icon:"🗳️"},
+  "2.3":{bg:"#e8f5e9",color:"#2e7d32",icon:"🏛️"},
+  "2.4":{bg:"#ffebee",color:"#c62828",icon:"🚫"},
+  "2.5":{bg:"#f9fbe7",color:"#558b2f",icon:"👤"},
+  "2.6":{bg:"#e3f2fd",color:"#1565c0",icon:"🗓️"},
+  "3.1":{bg:"#fbe9e7",color:"#bf360c",icon:"🏢"},
+  "3.2":{bg:"#f3e5f5",color:"#6a1b9a",icon:"⚙️"},
+  "3.3":{bg:"#e8eaf6",color:"#283593",icon:"🎓"}
+};
+
+let Q = [], answers = [], revealed = [];
+let current = 0, timerInterval, secondsLeft;
+
+function shuffle(arr){ const a=[...arr]; for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+// ═══════════════════════════════════════════════════════════
+//  INICIO
+// ═══════════════════════════════════════════════════════════
+function startExam(){
+  // ── Selección proporcional de N_PREGUNTAS del banco ──
+  const N = CONFIG.N_PREGUNTAS;
+  const byArea = {};
+  QBANK.forEach(q => { if(!byArea[q.sa]) byArea[q.sa]=[]; byArea[q.sa].push(q); });
+  Object.keys(byArea).forEach(k => byArea[k] = shuffle(byArea[k]));
+
+  const saKeys = Object.keys(byArea).sort();
+  const totalBank = QBANK.length;
+  const quotas = {};
+  let assigned = 0;
+  saKeys.forEach(k => {
+    quotas[k] = Math.floor((byArea[k].length / totalBank) * N);
+    assigned += quotas[k];
+  });
+  const residuals = saKeys
+    .map(k => ({ k, r: (byArea[k].length / totalBank) * N - quotas[k] }))
+    .sort((a, b) => b.r - a.r);
+  let rem = N - assigned;
+  for (let i = 0; rem > 0; i++, rem--) quotas[residuals[i % saKeys.length].k]++;
+  saKeys.forEach(k => { quotas[k] = Math.min(quotas[k], byArea[k].length); });
+
+  Q = shuffle(saKeys.flatMap(k => byArea[k].slice(0, quotas[k])));
+
+  answers  = new Array(Q.length).fill(null);
+  revealed = new Array(Q.length).fill(false);
+  current  = 0;
+
+  document.getElementById('startScreen').classList.add('hidden');
+  document.getElementById('examScreen').classList.remove('hidden');
+  document.getElementById('navBar').classList.remove('hidden');
+  renderQuestion(0);
+  startTimer();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════════════════
+function renderQuestion(idx){
+  current = idx;
+  const q = Q[idx], sc = SS[q.sa] || {bg:"#f3e5f5",color:"#6a1b9a",icon:"📌"};
+  const isR = revealed[idx], sel = answers[idx];
+
+  let ph = '';
+  if(q.p) ph = `<div class="passage"><div class="passage-label">📄 ${q.pt}</div>${q.p.replace(/\n/g,'<br>')}</div>`;
+
+  const L = ['A','B','C'];
+  const opts = q.o.map((o,i) => {
+    let cls='option', icon='';
+    if(isR){
+      cls+=' disabled';
+      if(i===q.c){ cls+=' correct'; icon='<div class="opt-result-icon">✅</div>'; }
+      else if(i===sel && i!==q.c){ cls+=' incorrect'; icon='<div class="opt-result-icon">❌</div>'; }
+    } else if(i===sel) cls+=' selected';
+    return `<div class="${cls}" onclick="sel(${idx},${i})">
+      <div class="opt-letter-col"><div class="opt-letter">${L[i]}</div></div>
+      <div class="opt-text">${o}</div>${icon}
+    </div>`;
+  }).join('');
+
+  const ri = isR ? (sel===q.c ? '✅ Correcto' : sel===null ? '⏭️ Sin responder' : '❌ Incorrecto') : '';
+
+  window.scrollTo({top:0,behavior:'instant'});
+  document.getElementById('examScreen').innerHTML = `
+    <div class="question-card">
+      <div class="q-header">
+        <div class="q-num-label">Preg. ${idx+1}/${Q.length}</div>
+        <div class="q-area-badge">${sc.icon} ${q.sal}</div>
+      </div>
+      <div class="q-body">
+        ${ph}
+        <div class="question-text">${q.q}</div>
+        <div class="options">${opts}</div>
+        <div class="biblio-ref">📚 ${q.ref}</div>
+      </div>
+      <div class="explanation ${isR?'show':''}">
+        <strong>${ri}${ri?' — ':''}Explicación:</strong> ${q.ex}
+      </div>
+    </div>
+    ${!isR && answers[idx]!==null
+      ? `<div class="ver-sol-wrap"><button class="btn-ver-sol" onclick="rev(${idx})">Ver explicación 💡</button></div>`
+      : ''}`;
+
+  document.getElementById('progressBar').style.width = ((idx+1)/Q.length*100)+'%';
+  document.getElementById('navCurrent').textContent = idx+1;
+  document.getElementById('navTotal').textContent   = Q.length;
+  document.getElementById('btnPrev').disabled = idx===0;
+  document.getElementById('btnNext').textContent = idx===Q.length-1 ? '🏁 Finalizar' : 'Sig. →';
+}
+
+function sel(qi,oi){ if(revealed[qi]) return; answers[qi]=oi; renderQuestion(qi); }
+function rev(idx){ revealed[idx]=true; renderQuestion(idx); }
+function nextQ(){ if(current<Q.length-1) renderQuestion(current+1); else showResults(); }
+function prevQ(){ if(current>0) renderQuestion(current-1); }
+
+// ═══════════════════════════════════════════════════════════
+//  TIMER
+// ═══════════════════════════════════════════════════════════
+function startTimer(){
+  secondsLeft = CONFIG.TIEMPO_MIN * 60;
+  timerInterval = setInterval(()=>{
+    secondsLeft--;
+    const m=Math.floor(secondsLeft/60).toString().padStart(2,'0');
+    const s=(secondsLeft%60).toString().padStart(2,'0');
+    const el=document.getElementById('timer');
+    el.textContent=`${m}:${s}`;
+    el.className='timer'+(secondsLeft<300?' danger':secondsLeft<600?' warning':'');
+    if(secondsLeft<=0){ clearInterval(timerInterval); showResults(); }
+  },1000);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RESULTADOS
+// ═══════════════════════════════════════════════════════════
+function showResults(){
+  clearInterval(timerInterval);
+  document.getElementById('examScreen').classList.add('hidden');
+  document.getElementById('navBar').classList.add('hidden');
+
+  const total    = Q.length;
+  const answered = answers.filter(a=>a!==null).length;
+  const correct  = answers.filter((a,i)=>a===Q[i].c).length;
+  const wrong    = answered - correct;
+  const skipped  = total - answered;
+  const pct      = Math.round(correct/total*100);
+
+  // Agrupación por bloque macro
+  const areaMap = {
+    "1.1":"Sistema Político Mexicano","1.2":"Sistema Político Mexicano",
+    "1.3":"Sistema Político Mexicano","1.4":"Sistema Político Mexicano",
+    "2.1":"Sistema Electoral Mexicano","2.2":"Sistema Electoral Mexicano",
+    "2.3":"Sistema Electoral Mexicano","2.4":"Sistema Electoral Mexicano",
+    "2.5":"Sistema Electoral Mexicano","2.6":"Sistema Electoral Mexicano",
+    "3.1":"Instituto Nacional Electoral","3.2":"Instituto Nacional Electoral",
+    "3.3":"Instituto Nacional Electoral"
+  };
+  const areas = {
+    "Sistema Político Mexicano":{total:0,correct:0},
+    "Sistema Electoral Mexicano":{total:0,correct:0},
+    "Instituto Nacional Electoral":{total:0,correct:0}
+  };
+  const subs = {};
+  Q.forEach((q,i)=>{
+    const area = areaMap[q.sa] || 'Otros';
+    if(areas[area]){ areas[area].total++; if(answers[i]===q.c) areas[area].correct++; }
+    if(!subs[q.sa]) subs[q.sa]={label:q.sal,total:0,correct:0};
+    subs[q.sa].total++;
+    if(answers[i]===q.c) subs[q.sa].correct++;
+  });
+
+  const weak = Object.entries(subs).filter(([,s])=>s.correct/s.total<0.6).map(([,s])=>s.label);
+  const cc   = pct>=70?'score-good':pct>=50?'score-mid':'score-low';
+  const msg  = pct>=80?'¡Excelente! Dominas el conocimiento cívico-electoral.'
+             : pct>=60?'Buen avance. Refuerza los temas señalados.'
+             : 'Diagnóstico listo. Enfócate en los temas marcados esta semana.';
+
+  const rows = Object.entries(areas).filter(([,a])=>a.total>0).map(([name,a])=>{
+    const p=Math.round(a.correct/a.total*100);
+    const icon=p>=80?'✅':p>=60?'⚠️':'❌';
+    const bc=p>=60?'linear-gradient(90deg,#6a1b9a,#ab47bc)':'linear-gradient(90deg,#c62828,#ef5350)';
+    return `<div class="area-row">
+      <div class="area-name">${icon} ${name}</div>
+      <div class="area-bar-wrap"><div class="area-bar" style="width:${p}%;background:${bc}"></div></div>
+      <div class="area-pct" style="color:${p>=60?'#6a1b9a':'#c62828'}">${p}%</div></div>`;
+  }).join('');
+
+  const wb = weak.length
+    ? `<div class="weak-banner"><h4>🎯 Estudia esto primero:</h4><p>Menos del 60% en estas subáreas. Priorízalas esta semana.</p><div class="weak-tags">${weak.map(t=>`<span class="weak-tag">📌 ${t}</span>`).join('')}</div></div>`
+    : `<div style="background:#e8f5e9;border-radius:10px;padding:14px;margin:14px 0;color:#2e7d32;font-weight:600">✅ ¡Dominas todas las áreas!</div>`;
+
+  const tu=CONFIG.TIEMPO_MIN*60-secondsLeft, tm=Math.floor(tu/60), ts=tu%60;
+
+  document.getElementById('resultsScreen').innerHTML = `
+    <div class="results-screen">
+      <div style="background:#f3e5f5;border-radius:10px;padding:9px 14px;margin-bottom:18px;font-size:.82rem;color:#6a1b9a;font-weight:600">
+        📋 DIAGNÓSTICO ${CONFIG.MODULO.toUpperCase()} — ${new Date().toLocaleDateString('es-MX')}
+      </div>
+      <div class="score-circle ${cc}">${pct}%<div class="score-sub">${correct}/${total}</div></div>
+      <h2 style="margin-bottom:8px">${msg}</h2>
+      <p style="margin-bottom:20px;color:#777;font-size:.85rem">Tiempo: ${tm}m ${ts}s · Respondidas: ${answered}/${total}</p>
+      <div class="stats-grid">
+        <div class="stat-card stat-correct"><div class="n">${correct}</div><div class="l">✅ Correctas</div></div>
+        <div class="stat-card stat-wrong"><div class="n">${wrong}</div><div class="l">❌ Incorrectas</div></div>
+        <div class="stat-card stat-skip"><div class="n">${skipped}</div><div class="l">⏭️ Saltadas</div></div>
+      </div>
+      ${wb}
+      <div style="text-align:left;margin-bottom:24px">
+        <h3 style="font-size:.9rem;font-weight:700;color:#444;margin-bottom:10px">Desempeño por área</h3>
+        ${rows}
+      </div>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-primary btn-lg" onclick="reviewExam()">Revisar con explicaciones</button>
+        <button class="btn btn-secondary btn-lg" onclick="location.reload()">Reiniciar (nuevo orden) ⚡</button>
+      </div>
+      <div style="margin-top:18px;padding:10px 12px;background:#f9f5ff;border-radius:8px;font-size:.69rem;color:#aaa;text-align:left;line-height:1.7;border-left:3px solid #ce93d8">
+        📚 <strong style="color:#9c27b0">Bibliografía:</strong>
+        CPEUM (2025) · LGIPE (2024) · LGPP (2023) · LGSMIME (2024) · LGMDE (2021) · Estatuto del SPEN (2024) · Reglamento de Elecciones INE (2025) · Ley Federal de Consulta Popular (2021) · Ley Federal de Revocación de Mandato (2021) · Prud'homme, Cuaderno de Divulgación N°15, INE (2016)
+      </div>
+    </div>`;
+  document.getElementById('resultsScreen').classList.remove('hidden');
+  window.scrollTo(0,0);
+}
+
+function reviewExam(){
+  document.getElementById('resultsScreen').classList.add('hidden');
+  document.getElementById('examScreen').classList.remove('hidden');
+  document.getElementById('navBar').classList.remove('hidden');
+  revealed = revealed.map(()=>true);
+  renderQuestion(0);
+  window.scrollTo(0,0);
+}
+
+// ── Inicia la carga al abrir la página ──
+cargarBanco();
+</script>
+</body>
+</html>

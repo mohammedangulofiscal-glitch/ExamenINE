@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Simulacro INE – Módulo B Matemáticas</title>
+
+<!-- ═══════════════════════════════════════════════════════
+  CONFIGURACIÓN DEL SIMULACRO
+  Solo cambia estas líneas para crear un nuevo simulacro:
+    BANCO_URL  → URL raw del archivo JS en GitHub
+    MODULO     → Nombre visible del módulo
+    TIEMPO_MIN → Duración en minutos
+════════════════════════════════════════════════════════ -->
+<script>
+  const CONFIG = {
+    BANCO_URL:   'https://raw.githubusercontent.com/derechoelectoral2026/Bancos-Spen/main/banco-modulo-b.js',
+    MODULO:      'Módulo B — Matemáticas',
+    SUBTITULO:   'Competencia matemática · Diagnóstico',
+    TIEMPO_MIN:  45,
+    N_PREGUNTAS: 30   // ← preguntas a seleccionar del banco (cambia este número)
+  };
+</script>
+
+<style>
+*, *::before, *::after { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+body { font-family:'Segoe UI',Arial,sans-serif; background:#f0f4ff; color:#222; min-height:100dvh; overflow-x:hidden; }
+
+/* ── HEADER ── */
+.header { background:linear-gradient(135deg,#1565c0,#1e88e5); color:white; padding:10px 14px; display:flex; align-items:center; gap:10px; box-shadow:0 2px 8px rgba(0,0,0,.2); position:sticky; top:0; z-index:200; }
+.header-logo { font-size:1.35rem; flex-shrink:0; }
+.header-text { flex:1; min-width:0; }
+.header h1 { font-size:.88rem; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.header p  { font-size:.62rem; opacity:.82; margin-top:1px; }
+.header-right { flex-shrink:0; text-align:right; }
+.timer { font-size:1.45rem; font-weight:800; font-variant-numeric:tabular-nums; letter-spacing:.5px; line-height:1; }
+.t-lbl { font-size:.55rem; opacity:.65; margin-top:1px; }
+.timer.warning { color:#ffe082; }
+.timer.danger  { color:#ff6b6b; animation:pulse 1s infinite; }
+@keyframes pulse { 0%,100%{opacity:1}50%{opacity:.45} }
+.progress-wrap { background:#bbdefb; height:3px; }
+.progress-bar  { height:3px; background:#fff; transition:width .4s; }
+
+/* ── MAIN ── */
+.main { padding:12px 12px 80px; max-width:600px; margin:0 auto; }
+
+/* ── LOADING ── */
+.loading-screen { background:white; border-radius:14px; padding:40px 16px; box-shadow:0 2px 12px rgba(0,0,0,.09); margin-top:14px; text-align:center; }
+.spinner { width:40px; height:40px; border:4px solid #bbdefb; border-top-color:#1565c0; border-radius:50%; animation:spin .8s linear infinite; margin:0 auto 16px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.loading-screen p { color:#888; font-size:.85rem; }
+
+/* ── ERROR ── */
+.error-screen { background:white; border-radius:14px; padding:28px 16px; box-shadow:0 2px 12px rgba(0,0,0,.09); margin-top:14px; text-align:center; border-top:4px solid #e53935; }
+.error-screen h3 { color:#c62828; margin-bottom:8px; }
+.error-screen p { color:#666; font-size:.82rem; line-height:1.5; }
+.error-screen code { background:#f5f5f5; padding:3px 7px; border-radius:4px; font-size:.78rem; word-break:break-all; }
+
+/* ── START SCREEN ── */
+.start-screen { background:white; border-radius:14px; padding:22px 16px; box-shadow:0 2px 12px rgba(0,0,0,.09); margin-top:14px; text-align:center; }
+.start-screen h2 { font-size:1.3rem; color:#1565c0; margin-bottom:10px; }
+.info-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; margin:16px 0; }
+.info-card { background:#e3f2fd; border-radius:10px; padding:11px 8px; }
+.info-card .num { font-size:1.5rem; font-weight:800; color:#1565c0; }
+.info-card .lbl { font-size:.72rem; color:#666; margin-top:2px; }
+.topic-grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; margin:13px 0; text-align:left; }
+.topic-pill { background:#e3f2fd; border-radius:7px; padding:7px 10px; font-size:.77rem; color:#1565c0; display:flex; justify-content:space-between; }
+.topic-pill .cnt { font-weight:800; }
+.format-legend { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin:12px 0; }
+.fmt-badge { font-size:.69rem; font-weight:700; padding:4px 10px; border-radius:20px; }
+
+/* ── QUESTION CARD ── */
+.question-card { background:white; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,.08); overflow:hidden; margin-bottom:12px; }
+.q-header { background:#1565c0; color:white; padding:10px 14px; display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+.q-num-label { font-size:.8rem; font-weight:700; letter-spacing:.3px; }
+.fmt-tag { font-size:.65rem; font-weight:700; padding:2px 8px; border-radius:12px; margin-top:4px; display:inline-block; }
+.q-area-badge { font-size:.67rem; font-weight:700; padding:4px 9px; border-radius:20px; background:rgba(255,255,255,.22); text-transform:uppercase; white-space:nowrap; flex-shrink:0; align-self:flex-start; }
+.q-body { padding:14px 13px; }
+
+/* PASSAGE */
+.passage { background:#f9fbe7; border:1px solid #dce775; border-left:4px solid #afb42b; padding:10px 12px; border-radius:0 8px 8px 0; margin-bottom:12px; font-size:.83rem; line-height:1.65; }
+.passage-label { font-size:.66rem; font-weight:700; color:#827717; text-transform:uppercase; margin-bottom:5px; letter-spacing:.5px; }
+
+/* QUESTION TEXT */
+.question-text { font-size:.9rem; font-weight:600; line-height:1.55; margin-bottom:15px; color:#1a1a2e; border-bottom:1px dashed #e0e0e0; padding-bottom:13px; }
+
+/* ── TIPO A ── */
+.options-direct { display:flex; flex-direction:column; gap:0; border:1.5px solid #e0e0e0; border-radius:10px; overflow:hidden; }
+.option-direct { display:flex; align-items:stretch; cursor:pointer; transition:background .13s; font-size:.88rem; line-height:1.45; border-bottom:1px solid #e8e8e8; min-height:48px; }
+.option-direct:last-child { border-bottom:none; }
+.option-direct:active:not(.disabled) { background:#e3f2fd55; }
+.option-direct.selected  { background:#e3f2fd; }
+.option-direct.correct   { background:#e8f5e9; }
+.option-direct.incorrect { background:#ffebee; }
+.option-direct.disabled  { cursor:default; }
+.opt-letter-col { width:46px; flex-shrink:0; display:flex; align-items:center; justify-content:center; border-right:1.5px solid #e0e0e0; background:#fafafa; }
+.option-direct.selected  .opt-letter-col { background:#1e88e5; border-right-color:#1565c0; }
+.option-direct.correct   .opt-letter-col { background:#4caf50; border-right-color:#388e3c; }
+.option-direct.incorrect .opt-letter-col { background:#f44336; border-right-color:#c62828; }
+.opt-letter { width:26px; height:26px; border-radius:50%; border:2px solid #bbb; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:.78rem; color:#555; background:white; }
+.option-direct.selected  .opt-letter { border-color:white; color:#1e88e5; }
+.option-direct.correct   .opt-letter { border-color:white; color:#4caf50; }
+.option-direct.incorrect .opt-letter { border-color:white; color:#f44336; }
+.opt-text { flex:1; padding:12px 12px; color:#333; display:flex; align-items:center; }
+.option-direct.selected  .opt-text { color:#1565c0; font-weight:600; }
+.option-direct.correct   .opt-text { color:#2e7d32; font-weight:600; }
+.option-direct.incorrect .opt-text { color:#b71c1c; }
+.opt-result-icon { padding:12px 12px 12px 0; font-size:1rem; display:flex; align-items:center; flex-shrink:0; }
+
+/* ── TIPO B ── */
+.blank-sentence { font-size:.92rem; font-weight:600; line-height:1.8; margin-bottom:14px; color:#1a1a2e; padding:11px 13px; background:#f5f5f5; border-radius:8px; border-left:4px solid #1e88e5; }
+.blank-box { display:inline-block; border-bottom:2.5px solid #1565c0; min-width:100px; padding:0 4px; text-align:center; color:#1565c0; font-weight:800; background:transparent; vertical-align:middle; }
+.blank-box.filled { background:#e3f2fd; border-radius:4px 4px 0 0; }
+.blank-box.correct   { background:#e8f5e9; color:#2e7d32; border-bottom-color:#4caf50; }
+.blank-box.incorrect { background:#ffebee; color:#b71c1c; border-bottom-color:#f44336; }
+.options-blank { display:flex; flex-wrap:wrap; gap:8px; margin-top:4px; }
+.option-blank { padding:11px 16px; border:2px solid #e0e0e0; border-radius:8px; cursor:pointer; font-size:.86rem; font-weight:600; transition:all .15s; background:white; min-height:44px; display:flex; align-items:center; }
+.option-blank:active:not(.disabled) { border-color:#1e88e5; background:#e3f2fd44; }
+.option-blank.selected  { border-color:#1e88e5; background:#e3f2fd; color:#1565c0; }
+.option-blank.correct   { border-color:#4caf50; background:#e8f5e9; color:#2e7d32; }
+.option-blank.incorrect { border-color:#f44336; background:#ffebee; color:#b71c1c; }
+.option-blank.disabled  { cursor:default; }
+
+/* ── TIPO C ── */
+.order-instruction { font-size:.77rem; color:#666; margin-bottom:8px; font-style:italic; }
+.order-area { display:flex; flex-direction:column; gap:7px; }
+.order-item { display:flex; align-items:center; gap:9px; padding:11px 11px; border:2px solid #e0e0e0; border-radius:9px; background:white; font-size:.86rem; transition:all .15s; user-select:none; min-height:48px; }
+.order-item.order-correct { border-color:#4caf50; background:#e8f5e9; }
+.order-item.order-wrong   { border-color:#f44336; background:#ffebee; }
+.order-item.disabled { cursor:default; }
+.order-num { width:27px; height:27px; border-radius:50%; background:#eee; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:.78rem; color:#555; flex-shrink:0; }
+.order-item.order-correct .order-num { background:#4caf50; color:white; }
+.order-item.order-wrong   .order-num { background:#f44336; color:white; }
+.order-text { flex:1; line-height:1.4; }
+.order-arrows { display:flex; flex-direction:column; gap:3px; flex-shrink:0; }
+.arrow-btn { width:30px; height:27px; border:1.5px solid #e0e0e0; border-radius:6px; background:#f5f5f5; color:#666; font-size:.8rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .12s; }
+.arrow-btn:active:not([disabled]) { background:#1565c0; border-color:#1565c0; color:white; transform:scale(.92); }
+.arrow-btn[disabled] { opacity:.2; cursor:default; }
+
+/* ── TIPO D ── */
+.relation-wrap { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.rel-col-title { font-size:.68rem; font-weight:700; text-transform:uppercase; color:#888; margin-bottom:6px; letter-spacing:.5px; }
+.rel-left-items, .rel-right-items { display:flex; flex-direction:column; gap:6px; }
+.rel-left-item { padding:9px 10px; border:2px solid #e0e0e0; border-radius:8px; background:white; cursor:pointer; font-size:.82rem; font-weight:600; transition:all .15s; display:flex; align-items:center; gap:7px; min-height:44px; }
+.rel-left-item:active:not(.disabled) { border-color:#1e88e5; }
+.rel-left-item.rl-active  { border-color:#1565c0; background:#e3f2fd; }
+.rel-left-item.rl-matched { border-color:#4caf50; background:#e8f5e9; cursor:default; }
+.rel-left-item.rl-wrong   { border-color:#f44336; background:#ffebee; cursor:default; }
+.rel-left-item.disabled { cursor:default; }
+.rel-badge { width:21px; height:21px; border-radius:50%; background:#e3f2fd; border:2px solid #1565c0; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:.68rem; color:#1565c0; flex-shrink:0; }
+.rel-left-item.rl-matched .rel-badge { background:#4caf50; border-color:#4caf50; color:white; }
+.rel-left-item.rl-wrong   .rel-badge { background:#f44336; border-color:#f44336; color:white; }
+.rel-right-item { padding:9px 10px; border:2px solid #e0e0e0; border-radius:8px; background:white; cursor:pointer; font-size:.82rem; transition:all .15s; display:flex; align-items:center; gap:7px; min-height:44px; }
+.rel-right-item:active:not(.disabled) { border-color:#1e88e5; background:#e3f2fd22; }
+.rel-right-item.rr-target  { border-color:#1565c0; background:#e3f2fd44; }
+.rel-right-item.rr-matched { border-color:#4caf50; background:#e8f5e9; cursor:default; }
+.rel-right-item.rr-wrong   { border-color:#f44336; background:#ffebee; cursor:default; }
+.rel-right-item.disabled { cursor:default; }
+.rr-key { width:21px; height:21px; border-radius:50%; background:#eee; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:.68rem; color:#555; flex-shrink:0; }
+.rel-right-item.rr-matched .rr-key { background:#4caf50; color:white; }
+.rel-right-item.rr-wrong   .rr-key { background:#f44336; color:white; }
+
+/* EXPLANATION */
+.explanation { margin:0; padding:12px 14px; background:#e3f2fd; border-top:2px solid #1e88e5; font-size:.82rem; line-height:1.65; display:none; }
+.explanation.show { display:block; }
+.explanation strong { color:#1565c0; }
+
+/* VER SOLUCIÓN */
+.ver-sol-wrap { text-align:center; margin-bottom:10px; }
+.btn-ver-sol { background:white; border:2px solid #1e88e5; color:#1565c0; padding:9px 20px; border-radius:9px; font-weight:700; font-size:.84rem; cursor:pointer; transition:all .15s; min-height:44px; }
+.btn-ver-sol:active { background:#e3f2fd; }
+
+/* BUTTONS */
+.btn { padding:10px 18px; border-radius:9px; border:none; font-size:.85rem; font-weight:700; cursor:pointer; transition:all .15s; min-height:44px; }
+.btn:active { transform:scale(.96); }
+.btn-primary   { background:linear-gradient(135deg,#1565c0,#1e88e5); color:white; }
+.btn-primary:active   { opacity:.88; }
+.btn-primary:disabled { opacity:.4; cursor:not-allowed; }
+.btn-secondary { background:#f0f0f0; color:#555; }
+.btn-secondary:active { background:#e0e0e0; }
+.btn-lg { padding:13px 26px; font-size:.93rem; border-radius:11px; }
+
+/* BOTTOM NAV */
+.nav-bar { position:fixed; bottom:0; left:0; right:0; background:white; border-top:1px solid #e0e0e0; padding:8px 14px; padding-bottom:max(8px, env(safe-area-inset-bottom)); display:flex; justify-content:space-between; align-items:center; gap:8px; box-shadow:0 -2px 10px rgba(0,0,0,.07); z-index:200; }
+.nav-info { font-size:.78rem; color:#888; line-height:1.4; }
+.nav-info span { color:#1565c0; font-weight:700; }
+.nav-btns { display:flex; gap:7px; flex-shrink:0; }
+.btn-sm { padding:9px 15px; font-size:.8rem; min-height:40px; }
+
+/* RESULTS */
+.results-screen { background:white; border-radius:14px; padding:24px 16px; box-shadow:0 2px 12px rgba(0,0,0,.08); margin-top:14px; text-align:center; }
+.score-circle { width:108px; height:108px; border-radius:50%; margin:0 auto 16px; display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:1.8rem; font-weight:900; color:white; }
+.score-sub { font-size:.68rem; font-weight:500; opacity:.85; }
+.score-good { background:linear-gradient(135deg,#43a047,#66bb6a); }
+.score-mid  { background:linear-gradient(135deg,#f57c00,#ffa726); }
+.score-low  { background:linear-gradient(135deg,#c62828,#ef5350); }
+.stats-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:16px 0; }
+.stat-card { background:#f9f9f9; border-radius:10px; padding:11px 8px; }
+.stat-card .n { font-size:1.35rem; font-weight:800; }
+.stat-card .l { font-size:.7rem; color:#888; margin-top:2px; }
+.stat-correct .n { color:#43a047; }
+.stat-wrong .n   { color:#e53935; }
+.stat-skip .n    { color:#888; }
+.area-row { display:flex; align-items:center; gap:9px; margin-bottom:8px; font-size:.81rem; }
+.area-name { flex:1; color:#444; }
+.area-bar-wrap { flex:2; background:#eee; border-radius:4px; height:6px; }
+.area-bar { height:6px; border-radius:4px; }
+.area-pct { width:32px; text-align:right; font-weight:700; font-size:.78rem; }
+.weak-banner { background:linear-gradient(135deg,#e65100,#ff8f00); color:white; border-radius:11px; padding:12px 14px; margin:12px 0; text-align:left; }
+.weak-banner h4 { margin-bottom:4px; font-size:.9rem; }
+.weak-banner p  { font-size:.78rem; opacity:.9; margin-bottom:6px; }
+.weak-tags { display:flex; flex-wrap:wrap; gap:5px; }
+.weak-tag  { background:rgba(255,255,255,.25); border-radius:5px; padding:3px 8px; font-size:.74rem; font-weight:700; }
+.hidden { display:none !important; }
+
+@media(max-width:380px){
+  .relation-wrap { grid-template-columns:1fr; }
+  .info-grid { grid-template-columns:1fr 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="header-logo">🔢</div>
+  <div class="header-text">
+    <h1 id="hdrTitle">Cargando simulacro…</h1>
+    <p id="hdrSub"></p>
+  </div>
+  <div class="header-right">
+    <div class="timer" id="timer">--:--</div>
+    <div class="t-lbl">tiempo restante</div>
+  </div>
+</div>
+<div class="progress-wrap"><div class="progress-bar" id="progressBar" style="width:0%"></div></div>
+
+<div class="main">
+  <!-- LOADING -->
+  <div class="loading-screen" id="loadingScreen">
+    <div class="spinner"></div>
+    <p>Cargando banco de preguntas…</p>
+  </div>
+
+  <!-- ERROR -->
+  <div class="error-screen hidden" id="errorScreen">
+    <h3>⚠️ No se pudo cargar el banco</h3>
+    <p>Verifica que la URL del banco en <code>CONFIG.BANCO_URL</code> sea correcta y accesible.<br><br>URL configurada:<br><code id="errorUrl"></code></p>
+  </div>
+
+  <!-- START -->
+  <div class="start-screen hidden" id="startScreen">
+    <h2 id="startTitle"></h2>
+    <p style="background:#fff3e0;border-radius:9px;padding:10px;color:#e65100;font-weight:600;margin-bottom:14px;font-size:.82rem">
+      🎯 Modo diagnóstico — Al terminar verás qué temas dominas y cuáles reforzar.
+    </p>
+    <div class="info-grid" id="infoGrid"></div>
+    <p style="font-size:.78rem;color:#555;font-weight:600;margin-bottom:7px">Tipos de reactivos del examen real INE:</p>
+    <div class="format-legend">
+      <span class="fmt-badge" style="background:#e8eaf6;color:#3949ab">📝 Cuestionamiento directo</span>
+      <span class="fmt-badge" style="background:#e0f2f1;color:#00796b">✏️ Completamiento</span>
+      <span class="fmt-badge" style="background:#fff3e0;color:#e65100">🔢 Ordenamiento</span>
+      <span class="fmt-badge" style="background:#fce4ec;color:#c2185b">🔗 Relación de elementos</span>
+    </div>
+    <p style="font-size:.75rem;color:#888;margin-bottom:13px">⚡ El orden de preguntas cambia en cada sesión</p>
+    <div class="topic-grid" id="topicGrid"></div>
+    <button class="btn btn-primary btn-lg" style="width:100%" onclick="startExam()">Comenzar diagnóstico →</button>
+  </div>
+
+  <div id="examScreen" class="hidden"></div>
+  <div id="resultsScreen" class="hidden"></div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="nav-bar hidden" id="navBar">
+  <div class="nav-info">
+    Preg. <span id="navCurrent">1</span> de <span id="navTotal">?</span>
+  </div>
+  <div class="nav-btns">
+    <button class="btn btn-secondary btn-sm" id="btnPrev" onclick="prevQ()">← Ant.</button>
+    <button class="btn btn-primary  btn-sm" id="btnNext" onclick="nextQ()">Sig. →</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  CARGA DINÁMICA DEL BANCO
+// ═══════════════════════════════════════════════════════════
+let BANK = [];
+
+async function cargarBanco() {
+  try {
+    const res = await fetch(CONFIG.BANCO_URL + '?v=' + Date.now());
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const code = await res.text();
+
+    const fn = new Function(code + '\n return BANCO_MODULO_B;');
+    const banco = fn();
+
+    if (!banco || !Array.isArray(banco) || banco.length === 0) {
+      throw new Error('Banco vacío o nombre de variable incorrecto.');
+    }
+
+    BANK = banco;
+    inicializarSimulacro();
+
+  } catch (err) {
+    console.error('Error cargando banco:', err);
+    document.getElementById('loadingScreen').classList.add('hidden');
+    document.getElementById('errorUrl').textContent = CONFIG.BANCO_URL;
+    document.getElementById('errorScreen').classList.remove('hidden');
+  }
+}
+
+function inicializarSimulacro() {
+  document.getElementById('hdrTitle').textContent = CONFIG.MODULO;
+  document.getElementById('hdrSub').textContent = CONFIG.SUBTITULO;
+  document.title = 'Simulacro INE – ' + CONFIG.MODULO;
+
+  // Distribución dinámica por subárea
+  const subCounts = {};
+  BANK.forEach(q => { subCounts[q.sa] = (subCounts[q.sa] || 0) + 1; });
+  const subs = Object.keys(subCounts).sort();
+
+  document.getElementById('infoGrid').innerHTML = `
+    <div class="info-card"><div class="num">${CONFIG.N_PREGUNTAS}</div><div class="lbl">Preguntas</div></div>
+    <div class="info-card"><div class="num">${CONFIG.TIEMPO_MIN}</div><div class="lbl">Minutos</div></div>
+    <div class="info-card"><div class="num">${subs.length}</div><div class="lbl">Subáreas</div></div>`;
+
+  const subLabels = {};
+  BANK.forEach(q => { subLabels[q.sa] = q.sal; });
+  document.getElementById('topicGrid').innerHTML = subs.map(sa =>
+    `<div class="topic-pill"><span>${sa} ${subLabels[sa]}</span><span class="cnt">${subCounts[sa]}</span></div>`
+  ).join('');
+
+  document.getElementById('startTitle').textContent = '🔢 ' + CONFIG.MODULO;
+  document.getElementById('navTotal').textContent = CONFIG.N_PREGUNTAS;
+  document.getElementById('timer').textContent = CONFIG.TIEMPO_MIN + ':00';
+
+  document.getElementById('loadingScreen').classList.add('hidden');
+  document.getElementById('startScreen').classList.remove('hidden');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ESTADO GLOBAL
+// ═══════════════════════════════════════════════════════════
+const SS = {
+  "1.1":{bg:"#e8eaf6",color:"#3949ab",icon:"🔵"},
+  "1.2":{bg:"#e0f2f1",color:"#00796b",icon:"🟢"},
+  "1.3":{bg:"#fce4ec",color:"#c2185b",icon:"🔴"},
+  "1.4":{bg:"#fff3e0",color:"#e65100",icon:"🟠"},
+  "1.5":{bg:"#f3e5f5",color:"#7b1fa2",icon:"🟣"},
+  "1.6":{bg:"#e1f5fe",color:"#0277bd",icon:"🔷"}
+};
+const FMT = {
+  direct:  {label:"📝 Cuestionamiento directo", bg:"#e8eaf6", color:"#3949ab"},
+  blank:   {label:"✏️ Completamiento",          bg:"#e0f2f1", color:"#00796b"},
+  order:   {label:"🔢 Ordenamiento",            bg:"#fff3e0", color:"#e65100"},
+  relation:{label:"🔗 Relación de elementos",   bg:"#fce4ec", color:"#c2185b"}
+};
+
+let Q = [], answers = [], revealed = [], relState = [], orderState = [];
+let current = 0, timerInterval, secondsLeft;
+
+function shuffle(arr){ const a=[...arr]; for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+// ═══════════════════════════════════════════════════════════
+//  INICIO
+// ═══════════════════════════════════════════════════════════
+function startExam(){
+  // ── Selección proporcional de N_PREGUNTAS del banco ──
+  const N = CONFIG.N_PREGUNTAS;
+  const byArea = {};
+  BANK.forEach(q => { if(!byArea[q.sa]) byArea[q.sa]=[]; byArea[q.sa].push(q); });
+  Object.keys(byArea).forEach(k => byArea[k] = shuffle(byArea[k]));
+
+  // Reparto proporcional: cada subárea aporta según su peso relativo
+  const saKeys = Object.keys(byArea).sort();
+  const totalBank = BANK.length;
+  const quotas = {};
+  let assigned = 0;
+  // Primera pasada: cuotas proporcionales (floor)
+  saKeys.forEach(k => {
+    quotas[k] = Math.floor((byArea[k].length / totalBank) * N);
+    assigned += quotas[k];
+  });
+  // Segunda pasada: distribuir el resto por orden de fracción residual desc.
+  const residuals = saKeys
+    .map(k => ({ k, r: (byArea[k].length / totalBank) * N - quotas[k] }))
+    .sort((a, b) => b.r - a.r);
+  let rem = N - assigned;
+  for (let i = 0; rem > 0; i++, rem--) quotas[residuals[i % saKeys.length].k]++;
+  // Cada subárea puede aportar máximo lo que tiene disponible
+  saKeys.forEach(k => { quotas[k] = Math.min(quotas[k], byArea[k].length); });
+
+  Q = shuffle(saKeys.flatMap(k => byArea[k].slice(0, quotas[k])));
+
+  answers    = new Array(Q.length).fill(null);
+  revealed   = new Array(Q.length).fill(false);
+  relState   = Q.map(q => q.type==='relation' ? {leftSel:null, matched:{}} : null);
+  orderState = Q.map(q => q.type==='order'    ? [] : null);
+  current    = 0;
+
+  document.getElementById('startScreen').classList.add('hidden');
+  document.getElementById('examScreen').classList.remove('hidden');
+  document.getElementById('navBar').classList.remove('hidden');
+  renderQuestion(0);
+  startTimer();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RENDER
+// ═══════════════════════════════════════════════════════════
+function renderQuestion(idx){
+  current = idx;
+  const q   = Q[idx];
+  const sc  = SS[q.sa] || {bg:"#e3f2fd",color:"#1565c0",icon:"📊"};
+  const fmt = FMT[q.type] || {label:"📝",bg:"#eee",color:"#555"};
+  const isR = revealed[idx];
+
+  let ph = '';
+  if(q.p) ph = `<div class="passage"><div class="passage-label">📋 ${q.pt||'Información'}</div>${q.p.replace(/\n/g,'<br>')}</div>`;
+
+  let body = '';
+  if(q.type==='direct')   body = renderDirect(q,idx,isR);
+  if(q.type==='blank')    body = renderBlank(q,idx,isR);
+  if(q.type==='order')    body = renderOrder(q,idx,isR);
+  if(q.type==='relation') body = renderRelation(q,idx,isR);
+
+  let riLabel = '';
+  if(isR){
+    const ok = checkAnswer(idx);
+    riLabel = (answers[idx]===null && q.type==='direct') ? '⏭️ Sin responder — Solución:' : (ok ? '✅ Correcto — Solución:' : '❌ Incorrecto — Solución:');
+  }
+
+  const verSolBtn = (!isR && hasAnswer(idx))
+    ? `<div class="ver-sol-wrap"><button class="btn-ver-sol" onclick="rev(${idx})">Ver solución 💡</button></div>`
+    : '';
+
+  document.getElementById('examScreen').innerHTML = `
+    <div class="question-card">
+      <div class="q-header">
+        <div>
+          <div class="q-num-label">Pregunta ${idx+1} de ${Q.length}</div>
+          <span class="fmt-tag" style="background:${fmt.bg};color:${fmt.color}">${fmt.label}</span>
+        </div>
+        <div class="q-area-badge">${sc.icon} ${q.sal}</div>
+      </div>
+      <div class="q-body">
+        ${ph}
+        <div class="question-text">${q.q}</div>
+        ${body}
+      </div>
+      <div class="explanation ${isR?'show':''}">
+        <strong>${riLabel}</strong> ${q.ex}
+      </div>
+    </div>
+    ${verSolBtn}`;
+
+  document.getElementById('progressBar').style.width = ((idx+1)/Q.length*100)+'%';
+  document.getElementById('navCurrent').textContent  = idx+1;
+  document.getElementById('navTotal').textContent    = Q.length;
+  document.getElementById('btnPrev').disabled = idx===0;
+  document.getElementById('btnNext').textContent = idx===Q.length-1 ? 'Ver diagnóstico 🏁' : 'Siguiente →';
+}
+
+/* ── TIPO A ── */
+function renderDirect(q,idx,isR){
+  const L=['A','B','C']; const sel=answers[idx];
+  return '<div class="options-direct">'+q.o.map((o,i)=>{
+    let cls='option-direct',icon='';
+    if(isR){ cls+=' disabled'; if(i===q.c){cls+=' correct';icon='<div class="opt-result-icon">✅</div>';}
+             else if(i===sel&&i!==q.c){cls+=' incorrect';icon='<div class="opt-result-icon">❌</div>';} }
+    else if(i===sel) cls+=' selected';
+    return `<div class="${cls}" onclick="selDirect(${idx},${i})">
+      <div class="opt-letter-col"><div class="opt-letter">${L[i]}</div></div>
+      <div class="opt-text">${o}</div>${icon}</div>`;
+  }).join('')+'</div>';
+}
+
+/* ── TIPO B ── */
+function renderBlank(q,idx,isR){
+  const L=['A','B','C']; const sel=answers[idx];
+  const filled = sel!==null ? q.o[sel] : '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;';
+  let boxCls='blank-box'+(sel!==null?' filled':'');
+  if(isR){ boxCls+= sel===q.c?' correct':' incorrect'; }
+  const sentence = (q.sentence||q.q).replace('___', `<span class="${boxCls}">${filled}</span>`);
+  const opts = '<div class="options-blank">'+q.o.map((o,i)=>{
+    let cls='option-blank';
+    if(isR){ cls+=' disabled'; if(i===q.c) cls+=' correct'; else if(i===sel&&i!==q.c) cls+=' incorrect'; }
+    else if(i===sel) cls+=' selected';
+    return `<div class="${cls}" onclick="selBlank(${idx},${i})">${L[i]}) ${o}</div>`;
+  }).join('')+'</div>';
+  return `<div class="blank-sentence">${sentence}</div>${opts}`;
+}
+
+/* ── TIPO C ── */
+function renderOrder(q,idx,isR){
+  const order=orderState[idx];
+  if(isR){
+    const correctSeq=q.correctOrder.map(i=>q.items[i]);
+    return `<p class="order-instruction">Orden correcto:</p><div class="order-area">
+      ${correctSeq.map((item,pos)=>{
+        const isOk=(order[pos]===q.correctOrder[pos]);
+        return `<div class="order-item ${isOk?'order-correct':'order-wrong'} disabled">
+          <div class="order-num">${pos+1}</div><div class="order-text">${item}</div>
+          <div style="font-size:.9rem;flex-shrink:0">${isOk?'✅':'❌'}</div></div>`;
+      }).join('')}</div>`;
+  }
+  if(order.length<q.items.length){
+    return `<p class="order-instruction">Toca los pasos en el orden correcto (del 1° al último).</p>
+      ${order.length>0?`<div style="margin-bottom:8px;font-size:.75rem;color:#1565c0;font-weight:600">
+        Seleccionados: ${order.map((i,p)=>`<strong>${p+1}.</strong> ${q.items[i].substring(0,25)}…`).join(' → ')}</div>`:''}
+      <div class="order-area">
+        ${q.items.map((item,i)=>{
+          const pos=order.indexOf(i);
+          if(pos!==-1) return `<div class="order-item disabled" style="opacity:.45">
+            <div class="order-num">${pos+1}</div><div class="order-text">${item}</div></div>`;
+          return `<div class="order-item" style="cursor:pointer" onclick="selOrder(${idx},${i})">
+            <div class="order-num">·</div><div class="order-text">${item}</div></div>`;
+        }).join('')}</div>
+      ${order.length>0?`<div style="text-align:center;margin-top:8px">
+        <button class="btn-ver-sol" onclick="resetOrder(${idx})" style="font-size:.76rem;padding:6px 14px">↩ Reiniciar orden</button></div>`:''}`;
+  }
+  const n=order.length;
+  return `<p class="order-instruction">Ajusta el orden con ↑↓ si es necesario.</p>
+    <div class="order-area">
+      ${order.map((origIdx,pos)=>`
+        <div class="order-item">
+          <div class="order-num">${pos+1}</div><div class="order-text">${q.items[origIdx]}</div>
+          <div class="order-arrows">
+            <button class="arrow-btn" onclick="moveOrder(${idx},${pos},-1)" ${pos===0?'disabled':''}>↑</button>
+            <button class="arrow-btn" onclick="moveOrder(${idx},${pos},1)" ${pos===n-1?'disabled':''}>↓</button>
+          </div></div>`).join('')}
+    </div>
+    <div style="text-align:center;margin-top:8px">
+      <button class="btn-ver-sol" onclick="resetOrder(${idx})" style="font-size:.76rem;padding:6px 14px">↩ Reiniciar orden</button></div>`;
+}
+
+/* ── TIPO D ── */
+function renderRelation(q,idx,isR){
+  const rs=relState[idx];
+  if(isR){
+    return `<div class="relation-wrap">
+      <div><div class="rel-col-title">Concepto</div><div class="rel-left-items">
+        ${q.left.map((l,i)=>`<div class="rel-left-item rl-matched disabled">
+          <div class="rel-badge">${i+1}</div><span>${l}</span></div>`).join('')}
+      </div></div>
+      <div><div class="rel-col-title">Definición / Valor</div><div class="rel-right-items">
+        ${q.left.map((l,i)=>{
+          const userMatch=rs.matched[i]; const correctIdx=q.pairs[i];
+          const isOk=(userMatch===correctIdx);
+          return `<div class="rel-right-item ${isOk?'rr-matched':'rr-wrong'} disabled">
+            <div class="rr-key">${isOk?'✅':'❌'}</div><span>${q.right[correctIdx]}</span></div>`;
+        }).join('')}
+      </div></div></div>`;
+  }
+  const leftSel=rs.leftSel;
+  return `<p style="font-size:.8rem;color:#666;margin-bottom:10px;font-style:italic">Selecciona un elemento de la columna izquierda y luego su par en la derecha.</p>
+    <div class="relation-wrap">
+      <div><div class="rel-col-title">Concepto</div><div class="rel-left-items">
+        ${q.left.map((l,i)=>{
+          const matched=rs.matched[i]!==undefined;
+          let cls='rel-left-item';
+          if(matched) cls+=' rl-matched disabled'; else if(leftSel===i) cls+=' rl-active';
+          return `<div class="${cls}" onclick="selRelLeft(${idx},${i})">
+            <div class="rel-badge">${i+1}</div><span>${l}</span></div>`;
+        }).join('')}
+      </div></div>
+      <div><div class="rel-col-title">Definición / Valor</div><div class="rel-right-items">
+        ${q.right.map((r,j)=>{
+          const taken=Object.values(rs.matched).includes(j);
+          let cls='rel-right-item';
+          if(taken) cls+=' rr-matched disabled'; else if(leftSel!==null) cls+=' rr-target';
+          return `<div class="${cls}" onclick="selRelRight(${idx},${j})">
+            <div class="rr-key">${String.fromCharCode(65+j)}</div><span>${r}</span></div>`;
+        }).join('')}
+      </div></div></div>`;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  INTERACCIÓN
+// ═══════════════════════════════════════════════════════════
+function selDirect(qi,oi){ if(revealed[qi]) return; answers[qi]=oi; renderQuestion(qi); }
+function selBlank(qi,oi) { if(revealed[qi]) return; answers[qi]=oi; renderQuestion(qi); }
+
+function selOrder(qi,itemIdx){
+  if(revealed[qi]) return;
+  const order=orderState[qi];
+  if(order.includes(itemIdx)) return;
+  order.push(itemIdx);
+  if(order.length===Q[qi].items.length) answers[qi]=[...order];
+  renderQuestion(qi);
+}
+function resetOrder(qi){ orderState[qi]=[]; answers[qi]=null; renderQuestion(qi); }
+
+function moveOrder(idx,pos,dir){
+  const order=orderState[idx]; const np=pos+dir;
+  if(np<0||np>=order.length) return;
+  [order[pos],order[np]]=[order[np],order[pos]];
+  answers[idx]=[...order]; renderQuestion(idx);
+}
+
+function selRelLeft(qi,li){
+  if(revealed[qi]) return;
+  if(relState[qi].matched[li]!==undefined) return;
+  relState[qi].leftSel=li; renderQuestion(qi);
+}
+function selRelRight(qi,ri){
+  if(revealed[qi]) return;
+  const rs=relState[qi]; if(rs.leftSel===null) return;
+  if(Object.values(rs.matched).includes(ri)) return;
+  rs.matched[rs.leftSel]=ri; rs.leftSel=null;
+  if(Object.keys(rs.matched).length===Q[qi].left.length) answers[qi]={...rs.matched};
+  renderQuestion(qi);
+}
+
+function hasAnswer(idx){
+  const q=Q[idx];
+  if(q.type==='direct'||q.type==='blank') return answers[idx]!==null;
+  if(q.type==='order')    return orderState[idx].length>0;
+  if(q.type==='relation') return Object.keys(relState[idx].matched).length>0;
+  return false;
+}
+function checkAnswer(idx){
+  const q=Q[idx];
+  if(q.type==='direct'||q.type==='blank') return answers[idx]===q.c;
+  if(q.type==='order'){
+    const ord=orderState[idx];
+    if(ord.length!==q.correctOrder.length) return false;
+    return ord.every((v,i)=>v===q.correctOrder[i]);
+  }
+  if(q.type==='relation'){
+    const m=relState[idx].matched;
+    return q.pairs.every((cr,li)=>m[li]===cr);
+  }
+  return false;
+}
+
+function rev(idx){ revealed[idx]=true; renderQuestion(idx); }
+function nextQ(){ if(current<Q.length-1) renderQuestion(current+1); else showResults(); }
+function prevQ(){ if(current>0) renderQuestion(current-1); }
+
+// ═══════════════════════════════════════════════════════════
+//  TIMER
+// ═══════════════════════════════════════════════════════════
+function startTimer(){
+  secondsLeft = CONFIG.TIEMPO_MIN * 60;
+  timerInterval = setInterval(()=>{
+    secondsLeft--;
+    const m=Math.floor(secondsLeft/60).toString().padStart(2,'0');
+    const s=(secondsLeft%60).toString().padStart(2,'0');
+    const el=document.getElementById('timer');
+    el.textContent=`${m}:${s}`;
+    el.className='timer'+(secondsLeft<300?' danger':secondsLeft<600?' warning':'');
+    if(secondsLeft<=0){ clearInterval(timerInterval); showResults(); }
+  },1000);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  RESULTADOS
+// ═══════════════════════════════════════════════════════════
+function showResults(){
+  clearInterval(timerInterval);
+  document.getElementById('examScreen').classList.add('hidden');
+  document.getElementById('navBar').classList.add('hidden');
+
+  const total    = Q.length;
+  const answered = Q.filter((_,i)=>hasAnswer(i)).length;
+  const correct  = Q.filter((_,i)=>checkAnswer(i)).length;
+  const wrong    = Q.filter((_,i)=>hasAnswer(i)&&!checkAnswer(i)).length;
+  const skipped  = total-answered;
+  const pct      = Math.round(correct/total*100);
+
+  const subs={};
+  Q.forEach((q,i)=>{
+    if(!subs[q.sa]) subs[q.sa]={label:q.sal,total:0,correct:0};
+    subs[q.sa].total++;
+    if(checkAnswer(i)) subs[q.sa].correct++;
+  });
+
+  const weak=Object.entries(subs).filter(([,s])=>s.correct/s.total<0.6).map(([,s])=>s.label);
+  const cc=pct>=70?'score-good':pct>=50?'score-mid':'score-low';
+  const msg=pct>=80?'¡Excelente! Tienes buena base matemática.':pct>=60?'Resultado moderado. Hay temas por reforzar.':'Diagnóstico listo. Prioriza los temas marcados en rojo.';
+
+  const rows=Object.entries(subs).map(([k,s])=>{
+    const p=Math.round(s.correct/s.total*100);
+    const icon=p>=80?'✅':p>=60?'⚠️':'❌';
+    const bc=p>=60?'linear-gradient(90deg,#1565c0,#1e88e5)':'linear-gradient(90deg,#c62828,#ef5350)';
+    return `<div class="area-row"><div class="area-name">${icon} ${s.label}</div>
+      <div class="area-bar-wrap"><div class="area-bar" style="width:${p}%;background:${bc}"></div></div>
+      <div class="area-pct" style="color:${p>=60?'#1565c0':'#c62828'}">${p}%</div></div>`;
+  }).join('');
+
+  const wb=weak.length
+    ? `<div class="weak-banner"><h4>🎯 Estudia esto primero:</h4><p>Menos del 60% en estas subáreas. Priorízalas esta semana.</p><div class="weak-tags">${weak.map(t=>`<span class="weak-tag">📌 ${t}</span>`).join('')}</div></div>`
+    : `<div style="background:#e8f5e9;border-radius:10px;padding:13px;margin:13px 0;color:#2e7d32;font-weight:600">✅ ¡Dominas todas las subáreas!</div>`;
+
+  const tu=CONFIG.TIEMPO_MIN*60-secondsLeft, tm=Math.floor(tu/60), ts=tu%60;
+
+  document.getElementById('resultsScreen').innerHTML=`
+    <div class="results-screen">
+      <div style="background:#e3f2fd;border-radius:9px;padding:8px 13px;margin-bottom:16px;font-size:.8rem;color:#1565c0;font-weight:600">
+        📋 DIAGNÓSTICO ${CONFIG.MODULO.toUpperCase()} — ${new Date().toLocaleDateString('es-MX')}
+      </div>
+      <div class="score-circle ${cc}">${pct}%<div class="score-sub">${correct}/${total}</div></div>
+      <h2 style="margin-bottom:7px">${msg}</h2>
+      <p style="margin-bottom:18px;color:#777;font-size:.85rem">Tiempo: ${tm}m ${ts}s &nbsp;·&nbsp; Respondidas: ${answered}/${total}</p>
+      <div class="stats-grid">
+        <div class="stat-card stat-correct"><div class="n">${correct}</div><div class="l">✅ Correctas</div></div>
+        <div class="stat-card stat-wrong"><div class="n">${wrong}</div><div class="l">❌ Incorrectas</div></div>
+        <div class="stat-card stat-skip"><div class="n">${skipped}</div><div class="l">⏭️ Saltadas</div></div>
+      </div>
+      ${wb}
+      <div style="text-align:left;margin-bottom:22px">
+        <h3 style="font-size:.88rem;font-weight:700;color:#444;margin-bottom:9px">Desempeño por subárea</h3>
+        ${rows}
+      </div>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-primary btn-lg" onclick="reviewExam()">Revisar con soluciones</button>
+        <button class="btn btn-secondary btn-lg" onclick="location.reload()">Reiniciar (nuevo orden)</button>
+      </div>
+    </div>`;
+  document.getElementById('resultsScreen').classList.remove('hidden');
+  window.scrollTo(0,0);
+}
+
+function reviewExam(){
+  document.getElementById('resultsScreen').classList.add('hidden');
+  document.getElementById('examScreen').classList.remove('hidden');
+  document.getElementById('navBar').classList.remove('hidden');
+  revealed=revealed.map(()=>true);
+  renderQuestion(0);
+  window.scrollTo(0,0);
+}
+
+// ── Inicia la carga al abrir la página ──
+cargarBanco();
+</script>
+</body>
+</html>
